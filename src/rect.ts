@@ -1,8 +1,8 @@
 import { PIECE_STAND_PIECE_ORDER, SquarePlace, NUM_FILES, NUM_RANKS, Player, PieceStandPlace, PieceStandPiecePlace } from './board'
 
 // TODO: move to constants.ts and remove duplicates
-const DEFAULT_WIDTH = 800
-const DEFAULT_HEIGHT = 600
+const DEFAULT_WIDTH = 1080
+const DEFAULT_HEIGHT = 810
 
 export class Rect {
   readonly left: number

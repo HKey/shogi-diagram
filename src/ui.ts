@@ -1,8 +1,8 @@
 import { Rect, DiagramRect, BoardRect, PieceStandRect } from './rect'
 import { PIECE_STAND_PIECE_ORDER, Piece, Player, SquarePlace, NUM_RANKS, NUM_FILES, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
 
-const DEFAULT_WIDTH = 800
-const DEFAULT_HEIGHT = 600
+const DEFAULT_WIDTH = 1080
+const DEFAULT_HEIGHT = 810
 const DEFAULT_FONT = ''
 
 function getPieceNotation (piece: Piece) {
