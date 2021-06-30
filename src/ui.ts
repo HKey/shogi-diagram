@@ -176,7 +176,7 @@ function drawPiece(context: CanvasRenderingContext2D,
                    piece: Piece, player: Player,
                    board: BoardRect) {
 
-  const pieceNotation = getPieceNotation(piece)
+  let pieceNotation = getPieceNotation(piece)
   const square = board.squareRect(file, rank)
 
   saveDrawingState(context, () => {
@@ -187,11 +187,12 @@ function drawPiece(context: CanvasRenderingContext2D,
     context.textBaseline = 'middle'
     let scalex = 1, scaley = 1
 
-    // scaling
+    // For second player, turn notation.
     scaley = scaley / pieceNotation.length
     if (player === Player.SECOND) {
       scalex = scalex * -1
       scaley = scaley * -1
+      pieceNotation = pieceNotation.reverse()
     }
     context.scale(scalex, scaley)
 
