@@ -109,6 +109,18 @@ export class PieceStandPiecePlace implements Equal {
   }
 }
 
+export function promotedPiece(piece: Piece): Piece {
+  switch (piece) {
+    case Piece.ROOK: return Piece.PROMOTED_ROOK
+    case Piece.BISHOP: return Piece.PROMOTED_BISHOP
+    case Piece.SILVER: return Piece.PROMOTED_SILVER
+    case Piece.KNIGHT: return Piece.PROMOTED_KNIGHT
+    case Piece.LANCE: return Piece.PROMOTED_LANCE
+    case Piece.PAWN: return Piece.PROMOTED_PAWN
+    default: return piece
+  }
+}
+
 function unpromotedPiece(piece: Piece): Piece {
   switch (piece) {
     case Piece.PROMOTED_ROOK: return Piece.ROOK
