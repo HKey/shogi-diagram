@@ -1,5 +1,6 @@
 import { Rect, DiagramRect, BoardRect, PieceStandRect } from './rect'
 import { PIECE_STAND_PIECE_ORDER, Piece, Player, SquarePlace, NUM_RANKS, NUM_FILES, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
+import { parseSfen } from './sfen'
 
 const DEFAULT_WIDTH = 1080
 const DEFAULT_HEIGHT = 810
@@ -403,27 +404,42 @@ function testBoard() {
 
 // TEST:
 export function drawTest() {
-  let canvas = document.getElementById('target')
+  const canvas = document.getElementById('target')
+  const sfenTextArea = document.getElementById('sfen')
+  const readSfenButton = document.getElementById('read-sfen')
   if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error('Target element is not a canvas')
+    throw new Error('#target element is not a canvas')
+  }
+  if (!(sfenTextArea instanceof HTMLTextAreaElement)) {
+    throw new Error('#sfen element is not a textarea')
+  }
+  if (!(readSfenButton instanceof HTMLElement)) {
+    throw new Error('#read-sfen element is not an html element')
   }
   const board = testBoard()
 
-  let controller = new TestController(canvas, board)
+  let controller = new TestController(canvas, sfenTextArea,
+                                      readSfenButton, board)
   controller.drawBoard()
-
 }
 
 // TEST:
 export class TestController {
   private readonly canvas: HTMLCanvasElement
+  private readonly sfenTextArea: HTMLTextAreaElement
+  private readonly readSfenButton: HTMLElement
   private board: Board
   private mouseOver: MouseOverPlace | undefined
   private selected: SelectedPlace | undefined
   private lastMove: LastMovePlace | undefined
 
-  constructor(canvas: HTMLCanvasElement, board: Board) {
+  constructor(canvas: HTMLCanvasElement,
+              sfenTextArea: HTMLTextAreaElement,
+              readSfenButton: HTMLElement,
+              board: Board) {
     this.canvas = canvas
+    this.sfenTextArea = sfenTextArea
+    this.readSfenButton = readSfenButton
     this.board = board
     this.mouseOver = undefined
     this.selected = undefined
@@ -518,8 +534,15 @@ export class TestController {
       self.drawBoard()
     }
 
+    function onClickToReadSfen(_: MouseEvent) {
+      const text = self.sfenTextArea.value
+      self.board = parseSfen(text)
+      self.drawBoard()
+    }
+
     canvas.addEventListener('mousemove', onMouseMoveTest)
     canvas.addEventListener('click', onMouseClickTest)
+    readSfenButton.addEventListener('click', onClickToReadSfen)
   }
 
   drawBoard() {
