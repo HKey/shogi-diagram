@@ -537,6 +537,7 @@ export class TestController {
     function onClickToReadSfen(_: MouseEvent) {
       const text = self.sfenTextArea.value
       self.board = parseSfen(text)
+      self.lastMove = undefined
       self.drawBoard()
     }
 
