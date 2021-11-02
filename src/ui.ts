@@ -1,5 +1,6 @@
 import { Rect, DiagramRect, BoardRect, PieceStandRect } from './rect'
-import { PIECE_STAND_PIECE_ORDER, Piece, Player, SquarePlace, NUM_RANKS, NUM_FILES, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
+import { Piece, Player, NUM_RANKS, NUM_FILES, getRankNotation, getFileNotation } from './shogi'
+import { PIECE_STAND_PIECE_ORDER, SquarePlace, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
 import { parseSfen } from './sfen'
 
 const DEFAULT_WIDTH = 1080
@@ -23,40 +24,6 @@ function getPieceNotation (piece: Piece) {
     case Piece.PROMOTED_LANCE:  return ['成', '香']
     case Piece.PROMOTED_PAWN:   return ['と']
   }
-}
-
-function getRankNotation(rank: number) {
-  const arr = ['一',
-               '二',
-               '三',
-               '四',
-               '五',
-               '六',
-               '七',
-               '八',
-               '九']
-  if (rank >= arr.length || rank < 0) {
-    throw new Error(`Rank ${rank} is out of range.`)
-  }
-
-  return arr[rank]
-}
-
-function getFileNotation(file: number) {
-  const arr = ['１',
-               '２',
-               '３',
-               '４',
-               '５',
-               '６',
-               '７',
-               '８',
-               '９']
-  if (file >= arr.length || file < 0) {
-    throw new Error(`File ${file} is out of range.`)
-  }
-
-  return arr[file]
 }
 
 function pieceStandIcon(player: Player) {

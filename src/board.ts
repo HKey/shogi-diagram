@@ -1,24 +1,5 @@
 import { Equal } from './equal'
-
-export const NUM_RANKS = 9
-export const NUM_FILES = 9
-
-export const enum Piece {
-  KING,
-  ROOK,
-  BISHOP,
-  GOLD,
-  SILVER,
-  KNIGHT,
-  LANCE,
-  PAWN,
-  PROMOTED_ROOK,
-  PROMOTED_BISHOP,
-  PROMOTED_SILVER,
-  PROMOTED_KNIGHT,
-  PROMOTED_LANCE,
-  PROMOTED_PAWN
-}
+import { Piece, Player, NUM_RANKS, NUM_FILES } from './shogi'
 
 export const PIECE_STAND_PIECE_ORDER = [
   Piece.KING,
@@ -30,11 +11,6 @@ export const PIECE_STAND_PIECE_ORDER = [
   Piece.LANCE,
   Piece.PAWN
 ]
-
-export const enum Player {
-  FIRST,
-  SECOND
-}
 
 function flippedPlayer(player: Player) {
   switch (player) {

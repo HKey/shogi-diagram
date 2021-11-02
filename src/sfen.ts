@@ -1,4 +1,5 @@
-import { NUM_RANKS, NUM_FILES, Board, Piece, Player, promotedPiece, SquarePiece, SquarePlace } from './board'
+import { NUM_RANKS, NUM_FILES, Piece, Player } from './shogi'
+import { Board, promotedPiece, SquarePiece, SquarePlace } from './board'
 
 const PIECE_CHARACTERS = 'KkRrBbGgSsNnLlPp'
 
