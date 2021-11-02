@@ -43,15 +43,15 @@ function getRankNotation(rank: number) {
 }
 
 function getFileNotation(file: number) {
-  const arr = ['1',
-               '2',
-               '3',
-               '4',
-               '5',
-               '6',
-               '7',
-               '8',
-               '9']
+  const arr = ['１',
+               '２',
+               '３',
+               '４',
+               '５',
+               '６',
+               '７',
+               '８',
+               '９']
   if (file >= arr.length || file < 0) {
     throw new Error(`File ${file} is out of range.`)
   }
