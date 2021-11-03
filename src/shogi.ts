@@ -63,3 +63,22 @@ export function getFileNotation(file: number) {
 
   return arr[file]
 }
+
+export function getPieceNotation (piece: Piece) {
+  switch (piece) {
+    case Piece.KING:            return ['玉']
+    case Piece.ROOK:            return ['飛']
+    case Piece.BISHOP:          return ['角']
+    case Piece.GOLD:            return ['金']
+    case Piece.SILVER:          return ['銀']
+    case Piece.KNIGHT:          return ['桂']
+    case Piece.LANCE:           return ['香']
+    case Piece.PAWN:            return ['歩']
+    case Piece.PROMOTED_ROOK:   return ['龍']
+    case Piece.PROMOTED_BISHOP: return ['馬']
+    case Piece.PROMOTED_SILVER: return ['成', '銀']
+    case Piece.PROMOTED_KNIGHT: return ['成', '桂']
+    case Piece.PROMOTED_LANCE:  return ['成', '香']
+    case Piece.PROMOTED_PAWN:   return ['と']
+  }
+}
