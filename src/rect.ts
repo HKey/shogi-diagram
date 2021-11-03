@@ -1,5 +1,5 @@
 import { NUM_FILES, NUM_RANKS, Player } from './shogi'
-import { PIECE_STAND_PIECE_ORDER, SquarePlace, PieceStandPlace, PieceStandPiecePlace } from './board'
+import { PIECE_STAND_PIECE_ORDER, SquarePlace, PieceStandPlace } from './board'
 
 // TODO: move to constants.ts and remove duplicates
 const DEFAULT_WIDTH = 1080
@@ -160,6 +160,20 @@ export class PieceStandRect extends Rect {
   }
 }
 
+export class PieceStandIndexedPlace {
+  readonly player: Player
+  readonly index: number
+
+  constructor(player: Player, index: number) {
+    if (index < 0 || index >= PIECE_STAND_PIECE_ORDER.length) {
+      throw new Error(`Index ${index} is out of range.`)
+    }
+
+    this.player = player
+    this.index = index
+  }
+}
+
 export class DiagramRect {
   readonly board: BoardRect
   private readonly firstPieceStand: PieceStandRect
@@ -208,12 +222,12 @@ export class DiagramRect {
     return undefined
   }
 
-  getRect(place: SquarePlace | PieceStandPlace | PieceStandPiecePlace) {
+  getRect(place: SquarePlace | PieceStandPlace | PieceStandIndexedPlace) {
     if (place instanceof SquarePlace) {
       return this.board.squareRect(place.file, place.rank)
     } else if (place instanceof PieceStandPlace) {
       return this.pieceStand(place.player)
-    } else if (place instanceof PieceStandPiecePlace) {
+    } else if (place instanceof PieceStandIndexedPlace) {
       return this.pieceStand(place.player).pieces[place.index]
     } else {
       throw new Error('Unreachable')

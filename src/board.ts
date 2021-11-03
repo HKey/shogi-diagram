@@ -60,21 +60,17 @@ export class PieceStandPlace implements Equal {
 
 export class PieceStandPiecePlace implements Equal {
   readonly player: Player
-  readonly index: number
+  readonly piece: Piece
 
-  constructor(player: Player, index: number) {
-    if (index < 0 || index >= PIECE_STAND_PIECE_ORDER.length) {
-      throw new Error(`Index ${index} is out of range.`)
-    }
-
+  constructor(player: Player, piece: Piece) {
     this.player = player
-    this.index = index
+    this.piece = piece
   }
 
   equal(other: any) {
     return other instanceof PieceStandPiecePlace
       && this.player === other.player
-      && this.index === other.index
+      && this.piece === other.piece
   }
 }
 
@@ -228,9 +224,13 @@ export class Board {
         return { piece: undefined, player: undefined }
       }
     } else if (place instanceof PieceStandPiecePlace) {
-      return {
-        piece: this.getPieceStand(place.player).pieceByIndex(place.index),
-        player: place.player
+      if (this.getPieceStand(place.player).has(place.piece)) {
+        return {
+          piece: place.piece,
+          player: place.player
+        }
+      } else {
+        return { piece: undefined, player: undefined }
       }
     } else {
       throw new Error('Unreachable')

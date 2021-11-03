@@ -1,4 +1,4 @@
-import { Rect, DiagramRect, BoardRect, PieceStandRect } from './rect'
+import { Rect, DiagramRect, BoardRect, PieceStandRect, PieceStandIndexedPlace } from './rect'
 import { Piece, Player, NUM_RANKS, NUM_FILES, getRankNotation, getFileNotation, getPieceNotation } from './shogi'
 import { PIECE_STAND_PIECE_ORDER, SquarePlace, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
 import { parseSfen } from './sfen'
@@ -229,8 +229,8 @@ function fillRect(context: CanvasRenderingContext2D, rect: Rect) {
   context.fillRect(rect.left, rect.top, rect.width, rect.height)
 }
 
-type MouseOverPlace = SquarePlace | PieceStandPlace | PieceStandPiecePlace
-type SelectedPlace = SquarePlace | PieceStandPiecePlace
+type MouseOverPlace = SquarePlace | PieceStandPlace | PieceStandIndexedPlace
+type SelectedPlace = SquarePlace | PieceStandIndexedPlace
 type LastMovePlace = SquarePlace
 
 function drawMouseOver(context: CanvasRenderingContext2D,
@@ -410,7 +410,7 @@ export class TestController {
           && self.selected === undefined
           && self.board.getPieceStand(hitPieceStand.player).length > index
           && index < PIECE_STAND_PIECE_ORDER.length) {
-          self.mouseOver = new PieceStandPiecePlace(hitPieceStand.player, index)
+          self.mouseOver = new PieceStandIndexedPlace(hitPieceStand.player, index)
         } else {
           self.mouseOver = new PieceStandPlace(hitPieceStand.player)
         }
@@ -443,14 +443,26 @@ export class TestController {
         self.selected = undefined
       } else if (self.selected !== undefined) {
         if (hitSquare !== undefined || hitPieceStand !== undefined) {
+          const moveFrom = (() => {
+            if (self.selected instanceof PieceStandIndexedPlace) {
+              const piece = self.board.getPieceStand(self.selected.player)
+                .pieceByIndex(self.selected.index)
+              if (piece === undefined) {
+                throw new Error('Invalid index of PieceStand')
+              }
+              return new PieceStandPiecePlace(self.selected.player, piece)
+            } else {
+              return self.selected
+            }
+          })()
           let moveTo
           if (hitSquare !== undefined) {
             moveTo = hitSquare
           } else if (hitPieceStand !== undefined) {
             moveTo = new PieceStandPlace(hitPieceStand.player)
           }
-          if (moveTo !== undefined && self.board.canMove(self.selected)) {
-            self.board.move(self.selected, moveTo)
+          if (moveTo !== undefined && self.board.canMove(moveFrom)) {
+            self.board.move(moveFrom, moveTo)
             if (moveTo instanceof SquarePlace) {
               self.lastMove = moveTo
             } else {
@@ -470,7 +482,7 @@ export class TestController {
               if (index !== undefined
                 && index < self.board.getPieceStand(player).length
                 && index < PIECE_STAND_PIECE_ORDER.length) {
-                self.selected = new PieceStandPiecePlace(player, index)
+                self.selected = new PieceStandIndexedPlace(player, index)
               }
               break
             }
