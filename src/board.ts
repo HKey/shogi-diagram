@@ -1,5 +1,5 @@
 import { Equal } from './equal'
-import { Piece, Player, NUM_RANKS, NUM_FILES } from './shogi'
+import { Piece, Player, flippedPlayer, NUM_RANKS, NUM_FILES } from './shogi'
 
 export const PIECE_STAND_PIECE_ORDER = [
   Piece.KING,
@@ -11,13 +11,6 @@ export const PIECE_STAND_PIECE_ORDER = [
   Piece.LANCE,
   Piece.PAWN
 ]
-
-function flippedPlayer(player: Player) {
-  switch (player) {
-    case Player.FIRST: return Player.SECOND
-    case Player.SECOND: return Player.FIRST
-  }
-}
 
 export class SquarePiece {
   readonly piece: Piece

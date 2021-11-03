@@ -20,6 +20,13 @@ export const enum Player {
   SECOND
 }
 
+export function flippedPlayer(player: Player) {
+  switch (player) {
+    case Player.FIRST: return Player.SECOND
+    case Player.SECOND: return Player.FIRST
+  }
+}
+
 export const NUM_RANKS = 9
 export const NUM_FILES = 9
 
