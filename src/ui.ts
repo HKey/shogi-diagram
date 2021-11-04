@@ -2,6 +2,8 @@ import { Rect, DiagramRect, BoardRect, PieceStandRect, PieceStandIndexedPlace } 
 import { Piece, Player, NUM_RANKS, NUM_FILES, getRankNotation, getFileNotation, getPieceNotation } from './shogi'
 import { PIECE_STAND_PIECE_ORDER, SquarePlace, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
 import { parseSfen } from './sfen'
+import { Record, Move } from './record'
+import { parseKif } from './kif'
 
 const DEFAULT_WIDTH = 1080
 const DEFAULT_HEIGHT = 810
@@ -301,94 +303,70 @@ function drawBoard(context: CanvasRenderingContext2D,
   }
 }
 
-function testBoard() {
-  let board = new Board()
-
-  // TEST:
-  board.setSquarePiece(new SquarePlace(4, 0), new SquarePiece(Piece.KING, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(7, 1), new SquarePiece(Piece.ROOK, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(1, 1), new SquarePiece(Piece.BISHOP, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(3, 0), new SquarePiece(Piece.GOLD, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(5, 0), new SquarePiece(Piece.GOLD, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(2, 0), new SquarePiece(Piece.SILVER, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(6, 0), new SquarePiece(Piece.SILVER, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(1, 0), new SquarePiece(Piece.KNIGHT, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(7, 0), new SquarePiece(Piece.KNIGHT, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(0, 0), new SquarePiece(Piece.LANCE, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(8, 0), new SquarePiece(Piece.LANCE, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(0, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(1, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(2, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(3, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(4, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(5, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(6, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(7, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(8, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-
-  board.setSquarePiece(new SquarePlace(4, 8), new SquarePiece(Piece.KING, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(1, 7), new SquarePiece(Piece.ROOK, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(7, 7), new SquarePiece(Piece.BISHOP, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(3, 8), new SquarePiece(Piece.GOLD, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(5, 8), new SquarePiece(Piece.GOLD, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(2, 8), new SquarePiece(Piece.SILVER, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(6, 8), new SquarePiece(Piece.SILVER, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(1, 8), new SquarePiece(Piece.KNIGHT, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(7, 8), new SquarePiece(Piece.KNIGHT, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(0, 8), new SquarePiece(Piece.LANCE, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(8, 8), new SquarePiece(Piece.LANCE, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(0, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(1, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(2, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(3, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(4, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(5, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(6, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(7, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(8, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-
-  return board
-}
-
 // TEST:
 export function drawTest() {
   const canvas = document.getElementById('target')
   const sfenTextArea = document.getElementById('sfen')
   const readSfenButton = document.getElementById('read-sfen')
+  const recordList = document.getElementById('record')
+  const kifTextArea = document.getElementById('kif')
+  const readKifButton = document.getElementById('read-kif')
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error('#target element is not a canvas')
   }
   if (!(sfenTextArea instanceof HTMLTextAreaElement)) {
     throw new Error('#sfen element is not a textarea')
   }
-  if (!(readSfenButton instanceof HTMLElement)) {
-    throw new Error('#read-sfen element is not an html element')
+  if (!(readSfenButton instanceof HTMLButtonElement)) {
+    throw new Error('#read-sfen element is not an html button element')
   }
-  const board = testBoard()
+  if (!(recordList instanceof HTMLSelectElement)) {
+    throw new Error('#record element is not an html select element')
+  }
+  if (!(kifTextArea instanceof HTMLTextAreaElement)) {
+    throw new Error('#kif element is not a textarea')
+  }
+  if (!(readKifButton instanceof HTMLButtonElement)) {
+    throw new Error('#read-kif element is not an html button element')
+  }
 
   let controller = new TestController(canvas, sfenTextArea,
-                                      readSfenButton, board)
-  controller.drawBoard()
+                                      readSfenButton,
+                                      recordList,
+                                      kifTextArea,
+                                      readKifButton)
 }
 
 // TEST:
 export class TestController {
   private readonly canvas: HTMLCanvasElement
   private readonly sfenTextArea: HTMLTextAreaElement
-  private readonly readSfenButton: HTMLElement
+  private readonly readSfenButton: HTMLButtonElement
+  private readonly recordList: HTMLSelectElement
+  private readonly kifTextArea: HTMLTextAreaElement
+  private readonly readKifButton: HTMLButtonElement
   private board: Board
+  private record: Record
+  private recordIndex: number
   private mouseOver: MouseOverPlace | undefined
   private selected: SelectedPlace | undefined
   private lastMove: LastMovePlace | undefined
 
   constructor(canvas: HTMLCanvasElement,
               sfenTextArea: HTMLTextAreaElement,
-              readSfenButton: HTMLElement,
-              board: Board) {
+              readSfenButton: HTMLButtonElement,
+              recordList: HTMLSelectElement,
+              kifTextArea: HTMLTextAreaElement,
+              readKifButton: HTMLButtonElement) {
     this.canvas = canvas
     this.sfenTextArea = sfenTextArea
     this.readSfenButton = readSfenButton
-    this.board = board
+    this.recordList = recordList
+    this.kifTextArea = kifTextArea
+    this.readKifButton = readKifButton
+    this.record = new Record()
+    this.recordIndex = 0
+    this.board = this.record.getBoard(this.recordIndex)
     this.mouseOver = undefined
     this.selected = undefined
     this.lastMove = undefined
@@ -501,9 +479,30 @@ export class TestController {
       self.drawBoard()
     }
 
-    canvas.addEventListener('mousemove', onMouseMoveTest)
-    canvas.addEventListener('click', onMouseClickTest)
-    readSfenButton.addEventListener('click', onClickToReadSfen)
+    function onChangeRecord(_: Event) {
+      const value = self.recordList.value
+      if (value !== '') {
+        self.setRecordIndex(parseInt(value))
+        self.drawBoard()
+      }
+    }
+
+    function onClickToReadKif(_: MouseEvent) {
+      const text = self.kifTextArea.value
+      self.record = parseKif(text)
+      self.updateRecordList()
+      self.drawBoard()
+    }
+
+    this.canvas.addEventListener('mousemove', onMouseMoveTest)
+    this.canvas.addEventListener('click', onMouseClickTest)
+    this.readSfenButton.addEventListener('click', onClickToReadSfen)
+    this.recordList.addEventListener('change', onChangeRecord)
+    this.readKifButton.addEventListener('click', onClickToReadKif)
+
+    this.record = new Record()
+    this.updateRecordList()
+    this.drawBoard()
   }
 
   drawBoard() {
@@ -513,5 +512,35 @@ export class TestController {
     }
     drawBoard(context, this.board,
               this.mouseOver, this.selected, this.lastMove)
+  }
+
+  updateRecordList() {
+    while (this.recordList.firstChild) {
+      this.recordList.removeChild(this.recordList.firstChild)
+    }
+    for (let i = 0; i < this.record.moves.length; i++) {
+      const option = new Option(`${i.toString()} ${this.record.getMoveNotation(i)}`,
+                                i.toString())
+      this.recordList.appendChild(option)
+    }
+    this.setRecordIndex(0)
+  }
+
+  setRecordIndex(index: number) {
+    if (index < 0 || this.record.moves.length <= index) {
+      throw new Error(`Index ${index} is out of range of the record`)
+    }
+
+    this.recordIndex = index
+    this.board = this.record.getBoard(index)
+    const move = this.record.moves[this.recordIndex]
+    if (move instanceof Move) {
+      this.lastMove = move.moveTo
+    } else {
+      this.lastMove = undefined
+    }
+    this.selected = undefined
+
+    this.recordList.selectedIndex = index
   }
 }
