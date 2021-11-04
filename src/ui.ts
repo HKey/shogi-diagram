@@ -1,63 +1,13 @@
-import { Rect, DiagramRect, BoardRect, PieceStandRect } from './rect'
-import { PIECE_STAND_PIECE_ORDER, Piece, Player, SquarePlace, NUM_RANKS, NUM_FILES, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
+import { Rect, DiagramRect, BoardRect, PieceStandRect, PieceStandIndexedPlace } from './rect'
+import { Piece, Player, NUM_RANKS, NUM_FILES, getRankNotation, getFileNotation, getPieceNotation } from './shogi'
+import { PIECE_STAND_PIECE_ORDER, SquarePlace, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
 import { parseSfen } from './sfen'
+import { Record, Move } from './record'
+import { parseKif } from './kif'
 
 const DEFAULT_WIDTH = 1080
 const DEFAULT_HEIGHT = 810
 const DEFAULT_FONT = ''
-
-function getPieceNotation (piece: Piece) {
-  switch (piece) {
-    case Piece.KING:            return ['玉']
-    case Piece.ROOK:            return ['飛']
-    case Piece.BISHOP:          return ['角']
-    case Piece.GOLD:            return ['金']
-    case Piece.SILVER:          return ['銀']
-    case Piece.KNIGHT:          return ['桂']
-    case Piece.LANCE:           return ['香']
-    case Piece.PAWN:            return ['歩']
-    case Piece.PROMOTED_ROOK:   return ['龍']
-    case Piece.PROMOTED_BISHOP: return ['馬']
-    case Piece.PROMOTED_SILVER: return ['成', '銀']
-    case Piece.PROMOTED_KNIGHT: return ['成', '桂']
-    case Piece.PROMOTED_LANCE:  return ['成', '香']
-    case Piece.PROMOTED_PAWN:   return ['と']
-  }
-}
-
-function getRankNotation(rank: number) {
-  const arr = ['一',
-               '二',
-               '三',
-               '四',
-               '五',
-               '六',
-               '七',
-               '八',
-               '九']
-  if (rank >= arr.length || rank < 0) {
-    throw new Error(`Rank ${rank} is out of range.`)
-  }
-
-  return arr[rank]
-}
-
-function getFileNotation(file: number) {
-  const arr = ['1',
-               '2',
-               '3',
-               '4',
-               '5',
-               '6',
-               '7',
-               '8',
-               '9']
-  if (file >= arr.length || file < 0) {
-    throw new Error(`File ${file} is out of range.`)
-  }
-
-  return arr[file]
-}
 
 function pieceStandIcon(player: Player) {
   switch (player) {
@@ -281,8 +231,8 @@ function fillRect(context: CanvasRenderingContext2D, rect: Rect) {
   context.fillRect(rect.left, rect.top, rect.width, rect.height)
 }
 
-type MouseOverPlace = SquarePlace | PieceStandPlace | PieceStandPiecePlace
-type SelectedPlace = SquarePlace | PieceStandPiecePlace
+type MouseOverPlace = SquarePlace | PieceStandPlace | PieceStandIndexedPlace
+type SelectedPlace = SquarePlace | PieceStandIndexedPlace
 type LastMovePlace = SquarePlace
 
 function drawMouseOver(context: CanvasRenderingContext2D,
@@ -353,94 +303,103 @@ function drawBoard(context: CanvasRenderingContext2D,
   }
 }
 
-function testBoard() {
-  let board = new Board()
-
-  // TEST:
-  board.setSquarePiece(new SquarePlace(4, 0), new SquarePiece(Piece.KING, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(7, 1), new SquarePiece(Piece.ROOK, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(1, 1), new SquarePiece(Piece.BISHOP, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(3, 0), new SquarePiece(Piece.GOLD, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(5, 0), new SquarePiece(Piece.GOLD, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(2, 0), new SquarePiece(Piece.SILVER, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(6, 0), new SquarePiece(Piece.SILVER, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(1, 0), new SquarePiece(Piece.KNIGHT, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(7, 0), new SquarePiece(Piece.KNIGHT, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(0, 0), new SquarePiece(Piece.LANCE, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(8, 0), new SquarePiece(Piece.LANCE, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(0, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(1, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(2, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(3, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(4, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(5, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(6, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(7, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-  board.setSquarePiece(new SquarePlace(8, 2), new SquarePiece(Piece.PAWN, Player.SECOND))
-
-  board.setSquarePiece(new SquarePlace(4, 8), new SquarePiece(Piece.KING, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(1, 7), new SquarePiece(Piece.ROOK, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(7, 7), new SquarePiece(Piece.BISHOP, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(3, 8), new SquarePiece(Piece.GOLD, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(5, 8), new SquarePiece(Piece.GOLD, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(2, 8), new SquarePiece(Piece.SILVER, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(6, 8), new SquarePiece(Piece.SILVER, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(1, 8), new SquarePiece(Piece.KNIGHT, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(7, 8), new SquarePiece(Piece.KNIGHT, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(0, 8), new SquarePiece(Piece.LANCE, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(8, 8), new SquarePiece(Piece.LANCE, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(0, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(1, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(2, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(3, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(4, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(5, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(6, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(7, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-  board.setSquarePiece(new SquarePlace(8, 6), new SquarePiece(Piece.PAWN, Player.FIRST))
-
-  return board
-}
-
 // TEST:
 export function drawTest() {
   const canvas = document.getElementById('target')
   const sfenTextArea = document.getElementById('sfen')
   const readSfenButton = document.getElementById('read-sfen')
+  const recordList = document.getElementById('record')
+  const kifTextArea = document.getElementById('kif')
+  const readKifButton = document.getElementById('read-kif')
+  const kifStartButton = document.getElementById('kif-start')
+  const kifEndButton = document.getElementById('kif-end')
+  const kifPrevButton = document.getElementById('kif-prev')
+  const kifNextButton = document.getElementById('kif-next')
+
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error('#target element is not a canvas')
   }
   if (!(sfenTextArea instanceof HTMLTextAreaElement)) {
     throw new Error('#sfen element is not a textarea')
   }
-  if (!(readSfenButton instanceof HTMLElement)) {
-    throw new Error('#read-sfen element is not an html element')
+  if (!(readSfenButton instanceof HTMLButtonElement)) {
+    throw new Error('#read-sfen element is not an html button element')
   }
-  const board = testBoard()
+  if (!(recordList instanceof HTMLSelectElement)) {
+    throw new Error('#record element is not an html select element')
+  }
+  if (!(kifTextArea instanceof HTMLTextAreaElement)) {
+    throw new Error('#kif element is not a textarea')
+  }
+  if (!(readKifButton instanceof HTMLButtonElement)) {
+    throw new Error('#read-kif element is not an html button element')
+  }
+  if (!(kifStartButton instanceof HTMLButtonElement)) {
+    throw new Error('#kif-start element is not an html button element')
+  }
+  if (!(kifEndButton instanceof HTMLButtonElement)) {
+    throw new Error('#kif-end element is not an html button element')
+  }
+  if (!(kifPrevButton instanceof HTMLButtonElement)) {
+    throw new Error('#kif-prev element is not an html button element')
+  }
+  if (!(kifNextButton instanceof HTMLButtonElement)) {
+    throw new Error('#kif-next element is not an html button element')
+  }
 
   let controller = new TestController(canvas, sfenTextArea,
-                                      readSfenButton, board)
-  controller.drawBoard()
+                                      readSfenButton,
+                                      recordList,
+                                      kifTextArea,
+                                      readKifButton,
+                                      kifStartButton,
+                                      kifEndButton,
+                                      kifPrevButton,
+                                      kifNextButton)
 }
 
 // TEST:
 export class TestController {
   private readonly canvas: HTMLCanvasElement
   private readonly sfenTextArea: HTMLTextAreaElement
-  private readonly readSfenButton: HTMLElement
+  private readonly readSfenButton: HTMLButtonElement
+  private readonly recordList: HTMLSelectElement
+  private readonly kifTextArea: HTMLTextAreaElement
+  private readonly readKifButton: HTMLButtonElement
+  private readonly kifStartButton: HTMLButtonElement
+  private readonly kifEndButton: HTMLButtonElement
+  private readonly kifPrevButton: HTMLButtonElement
+  private readonly kifNextButton: HTMLButtonElement
   private board: Board
+  private record: Record
+  private recordIndex: number
   private mouseOver: MouseOverPlace | undefined
   private selected: SelectedPlace | undefined
   private lastMove: LastMovePlace | undefined
 
   constructor(canvas: HTMLCanvasElement,
               sfenTextArea: HTMLTextAreaElement,
-              readSfenButton: HTMLElement,
-              board: Board) {
+              readSfenButton: HTMLButtonElement,
+              recordList: HTMLSelectElement,
+              kifTextArea: HTMLTextAreaElement,
+              readKifButton: HTMLButtonElement,
+              kifStartButton: HTMLButtonElement,
+              kifEndButton: HTMLButtonElement,
+              kifPrevButton: HTMLButtonElement,
+              kifNextButton: HTMLButtonElement) {
     this.canvas = canvas
     this.sfenTextArea = sfenTextArea
     this.readSfenButton = readSfenButton
-    this.board = board
+    this.recordList = recordList
+    this.kifTextArea = kifTextArea
+    this.readKifButton = readKifButton
+    this.kifStartButton = kifStartButton
+    this.kifEndButton = kifEndButton
+    this.kifPrevButton = kifPrevButton
+    this.kifNextButton = kifNextButton
+    this.record = new Record()
+    this.recordIndex = 0
+    this.board = this.record.getBoard(this.recordIndex)
     this.mouseOver = undefined
     this.selected = undefined
     this.lastMove = undefined
@@ -462,7 +421,7 @@ export class TestController {
           && self.selected === undefined
           && self.board.getPieceStand(hitPieceStand.player).length > index
           && index < PIECE_STAND_PIECE_ORDER.length) {
-          self.mouseOver = new PieceStandPiecePlace(hitPieceStand.player, index)
+          self.mouseOver = new PieceStandIndexedPlace(hitPieceStand.player, index)
         } else {
           self.mouseOver = new PieceStandPlace(hitPieceStand.player)
         }
@@ -495,14 +454,26 @@ export class TestController {
         self.selected = undefined
       } else if (self.selected !== undefined) {
         if (hitSquare !== undefined || hitPieceStand !== undefined) {
+          const moveFrom = (() => {
+            if (self.selected instanceof PieceStandIndexedPlace) {
+              const piece = self.board.getPieceStand(self.selected.player)
+                .pieceByIndex(self.selected.index)
+              if (piece === undefined) {
+                throw new Error('Invalid index of PieceStand')
+              }
+              return new PieceStandPiecePlace(self.selected.player, piece)
+            } else {
+              return self.selected
+            }
+          })()
           let moveTo
           if (hitSquare !== undefined) {
             moveTo = hitSquare
           } else if (hitPieceStand !== undefined) {
             moveTo = new PieceStandPlace(hitPieceStand.player)
           }
-          if (moveTo !== undefined && self.board.canMove(self.selected)) {
-            self.board.move(self.selected, moveTo)
+          if (moveTo !== undefined && self.board.canMove(moveFrom)) {
+            self.board.move(moveFrom, moveTo)
             if (moveTo instanceof SquarePlace) {
               self.lastMove = moveTo
             } else {
@@ -522,7 +493,7 @@ export class TestController {
               if (index !== undefined
                 && index < self.board.getPieceStand(player).length
                 && index < PIECE_STAND_PIECE_ORDER.length) {
-                self.selected = new PieceStandPiecePlace(player, index)
+                self.selected = new PieceStandIndexedPlace(player, index)
               }
               break
             }
@@ -541,9 +512,56 @@ export class TestController {
       self.drawBoard()
     }
 
-    canvas.addEventListener('mousemove', onMouseMoveTest)
-    canvas.addEventListener('click', onMouseClickTest)
-    readSfenButton.addEventListener('click', onClickToReadSfen)
+    function onChangeRecord(_: Event) {
+      const value = self.recordList.value
+      if (value !== '') {
+        self.setRecordIndex(parseInt(value))
+        self.drawBoard()
+      }
+    }
+
+    function onClickToReadKif(_: MouseEvent) {
+      const text = self.kifTextArea.value
+      self.record = parseKif(text)
+      self.updateRecordList()
+      self.drawBoard()
+    }
+
+    function onClickKifStart(_: MouseEvent) {
+      self.setRecordIndex(0)
+      self.drawBoard()
+    }
+
+    function onClickKifEnd(_: MouseEvent) {
+      self.setRecordIndex(self.record.moves.length - 1)
+      self.drawBoard()
+    }
+
+    function onClickKifPrev(_: MouseEvent) {
+      self.setRecordIndex(Math.max(self.recordIndex - 1, 0))
+      self.drawBoard()
+    }
+
+    function onClickKifNext(_: MouseEvent) {
+      self.setRecordIndex(Math.min(self.recordIndex + 1,
+                                   self.record.moves.length - 1))
+      self.drawBoard()
+    }
+
+
+    this.canvas.addEventListener('mousemove', onMouseMoveTest)
+    this.canvas.addEventListener('click', onMouseClickTest)
+    this.readSfenButton.addEventListener('click', onClickToReadSfen)
+    this.recordList.addEventListener('change', onChangeRecord)
+    this.readKifButton.addEventListener('click', onClickToReadKif)
+    this.kifStartButton.addEventListener('click', onClickKifStart)
+    this.kifEndButton.addEventListener('click', onClickKifEnd)
+    this.kifPrevButton.addEventListener('click', onClickKifPrev)
+    this.kifNextButton.addEventListener('click', onClickKifNext)
+
+    this.record = new Record()
+    this.updateRecordList()
+    this.drawBoard()
   }
 
   drawBoard() {
@@ -553,5 +571,35 @@ export class TestController {
     }
     drawBoard(context, this.board,
               this.mouseOver, this.selected, this.lastMove)
+  }
+
+  updateRecordList() {
+    while (this.recordList.firstChild) {
+      this.recordList.removeChild(this.recordList.firstChild)
+    }
+    for (let i = 0; i < this.record.moves.length; i++) {
+      const option = new Option(`${i.toString()} ${this.record.getMoveNotation(i)}`,
+                                i.toString())
+      this.recordList.appendChild(option)
+    }
+    this.setRecordIndex(0)
+  }
+
+  setRecordIndex(index: number) {
+    if (index < 0 || this.record.moves.length <= index) {
+      throw new Error(`Index ${index} is out of range of the record`)
+    }
+
+    this.recordIndex = index
+    this.board = this.record.getBoard(index)
+    const move = this.record.moves[this.recordIndex]
+    if (move instanceof Move) {
+      this.lastMove = move.moveTo
+    } else {
+      this.lastMove = undefined
+    }
+    this.selected = undefined
+
+    this.recordList.selectedIndex = index
   }
 }

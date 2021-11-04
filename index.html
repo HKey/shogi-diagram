@@ -8,8 +8,29 @@
       <canvas id='target'
               width='1080'
               height='810'></canvas>
-      <textarea id='sfen' placeholder='SFEN' rows=1></textarea>
-      <button id='read-sfen'>Read SFEN</button>
+      <div>
+        <label>SFEN</label>
+        <div>
+          <textarea id='sfen' placeholder='SFEN' rows=1></textarea>
+          <button id='read-sfen' type='button'>Read SFEN</button>
+        </div>
+      </div>
+      <div>
+        <label>KIF</label>
+        <div>
+          <div>
+            <div>
+              <button id='kif-start' type='button'>|◀</button>
+              <button id='kif-prev' type='button'>◀</button>
+              <button id='kif-next' type='button'>▶</button>
+              <button id='kif-end' type='button'>▶|</button>
+            </div>
+            <select id='record' size='10'></select>
+          </div>
+          <textarea id='kif' placeholder='KIF' rows=10></textarea>
+          <button id='read-kif' type='button'>Read KIF</button>
+        </div>
+      </div>
     </div>
     <script type='text/javascript' src='./dist/bundle.js'></script>
   </body>
