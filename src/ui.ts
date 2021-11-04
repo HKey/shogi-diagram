@@ -311,6 +311,11 @@ export function drawTest() {
   const recordList = document.getElementById('record')
   const kifTextArea = document.getElementById('kif')
   const readKifButton = document.getElementById('read-kif')
+  const kifStartButton = document.getElementById('kif-start')
+  const kifEndButton = document.getElementById('kif-end')
+  const kifPrevButton = document.getElementById('kif-prev')
+  const kifNextButton = document.getElementById('kif-next')
+
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error('#target element is not a canvas')
   }
@@ -329,12 +334,28 @@ export function drawTest() {
   if (!(readKifButton instanceof HTMLButtonElement)) {
     throw new Error('#read-kif element is not an html button element')
   }
+  if (!(kifStartButton instanceof HTMLButtonElement)) {
+    throw new Error('#kif-start element is not an html button element')
+  }
+  if (!(kifEndButton instanceof HTMLButtonElement)) {
+    throw new Error('#kif-end element is not an html button element')
+  }
+  if (!(kifPrevButton instanceof HTMLButtonElement)) {
+    throw new Error('#kif-prev element is not an html button element')
+  }
+  if (!(kifNextButton instanceof HTMLButtonElement)) {
+    throw new Error('#kif-next element is not an html button element')
+  }
 
   let controller = new TestController(canvas, sfenTextArea,
                                       readSfenButton,
                                       recordList,
                                       kifTextArea,
-                                      readKifButton)
+                                      readKifButton,
+                                      kifStartButton,
+                                      kifEndButton,
+                                      kifPrevButton,
+                                      kifNextButton)
 }
 
 // TEST:
@@ -345,6 +366,10 @@ export class TestController {
   private readonly recordList: HTMLSelectElement
   private readonly kifTextArea: HTMLTextAreaElement
   private readonly readKifButton: HTMLButtonElement
+  private readonly kifStartButton: HTMLButtonElement
+  private readonly kifEndButton: HTMLButtonElement
+  private readonly kifPrevButton: HTMLButtonElement
+  private readonly kifNextButton: HTMLButtonElement
   private board: Board
   private record: Record
   private recordIndex: number
@@ -357,13 +382,21 @@ export class TestController {
               readSfenButton: HTMLButtonElement,
               recordList: HTMLSelectElement,
               kifTextArea: HTMLTextAreaElement,
-              readKifButton: HTMLButtonElement) {
+              readKifButton: HTMLButtonElement,
+              kifStartButton: HTMLButtonElement,
+              kifEndButton: HTMLButtonElement,
+              kifPrevButton: HTMLButtonElement,
+              kifNextButton: HTMLButtonElement) {
     this.canvas = canvas
     this.sfenTextArea = sfenTextArea
     this.readSfenButton = readSfenButton
     this.recordList = recordList
     this.kifTextArea = kifTextArea
     this.readKifButton = readKifButton
+    this.kifStartButton = kifStartButton
+    this.kifEndButton = kifEndButton
+    this.kifPrevButton = kifPrevButton
+    this.kifNextButton = kifNextButton
     this.record = new Record()
     this.recordIndex = 0
     this.board = this.record.getBoard(this.recordIndex)
@@ -494,11 +527,37 @@ export class TestController {
       self.drawBoard()
     }
 
+    function onClickKifStart(_: MouseEvent) {
+      self.setRecordIndex(0)
+      self.drawBoard()
+    }
+
+    function onClickKifEnd(_: MouseEvent) {
+      self.setRecordIndex(self.record.moves.length - 1)
+      self.drawBoard()
+    }
+
+    function onClickKifPrev(_: MouseEvent) {
+      self.setRecordIndex(Math.max(self.recordIndex - 1, 0))
+      self.drawBoard()
+    }
+
+    function onClickKifNext(_: MouseEvent) {
+      self.setRecordIndex(Math.min(self.recordIndex + 1,
+                                   self.record.moves.length - 1))
+      self.drawBoard()
+    }
+
+
     this.canvas.addEventListener('mousemove', onMouseMoveTest)
     this.canvas.addEventListener('click', onMouseClickTest)
     this.readSfenButton.addEventListener('click', onClickToReadSfen)
     this.recordList.addEventListener('change', onChangeRecord)
     this.readKifButton.addEventListener('click', onClickToReadKif)
+    this.kifStartButton.addEventListener('click', onClickKifStart)
+    this.kifEndButton.addEventListener('click', onClickKifEnd)
+    this.kifPrevButton.addEventListener('click', onClickKifPrev)
+    this.kifNextButton.addEventListener('click', onClickKifNext)
 
     this.record = new Record()
     this.updateRecordList()
