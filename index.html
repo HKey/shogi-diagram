@@ -9,28 +9,31 @@
               width='1080'
               height='810'></canvas>
       <div>
-        <label>SFEN</label>
+        <div>
+          <button id='record-start' type='button'>|◀</button>
+          <button id='record-prev' type='button'>◀</button>
+          <button id='record-next' type='button'>▶</button>
+          <button id='record-end' type='button'>▶|</button>
+        </div>
+        <select id='record' size='10'></select>
+      </div>
+      <fieldset>
+        <legend>編集モード</legend>
+        <input id='free-editing' type='checkbox'>
+        <label for='free-editing'>自由編集</label>
+      </fieldset>
+      <fieldset>
+        <legend>SFEN</legend>
         <div>
           <textarea id='sfen' placeholder='SFEN' rows=1></textarea>
           <button id='read-sfen' type='button'>Read SFEN</button>
         </div>
-      </div>
-      <div>
-        <label>KIF</label>
-        <div>
-          <div>
-            <div>
-              <button id='kif-start' type='button'>|◀</button>
-              <button id='kif-prev' type='button'>◀</button>
-              <button id='kif-next' type='button'>▶</button>
-              <button id='kif-end' type='button'>▶|</button>
-            </div>
-            <select id='record' size='10'></select>
-          </div>
-          <textarea id='kif' placeholder='KIF' rows=10></textarea>
-          <button id='read-kif' type='button'>Read KIF</button>
-        </div>
-      </div>
+      </fieldset>
+      <fieldset>
+        <legend>KIF</legend>
+        <textarea id='kif' placeholder='KIF' rows=10></textarea>
+        <button id='read-kif' type='button'>Read KIF</button>
+      </fieldset>
     </div>
     <script type='text/javascript' src='./dist/bundle.js'></script>
   </body>

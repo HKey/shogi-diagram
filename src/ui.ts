@@ -1,9 +1,10 @@
 import { Rect, DiagramRect, BoardRect, PieceStandRect, PieceStandIndexedPlace } from './rect'
-import { Piece, Player, NUM_RANKS, NUM_FILES, getRankNotation, getFileNotation, getPieceNotation } from './shogi'
-import { PIECE_STAND_PIECE_ORDER, SquarePlace, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
+import { Piece, Player, NUM_RANKS, NUM_FILES, getRankNotation, getFileNotation, getPieceNotation, flippedPlayer } from './shogi'
+import { PIECE_STAND_PIECE_ORDER, SquarePlace, PieceStand, Board, PieceStandPlace, PieceStandPiecePlace } from './board'
 import { parseSfen } from './sfen'
-import { Record, Move } from './record'
+import { Move, DummyMove, DummyMoveKind, getBoardFromMoves, getMoveNotationFromMoves } from './record'
 import { parseKif } from './kif'
+import { DedupViewNode } from './node'
 
 const DEFAULT_WIDTH = 1080
 const DEFAULT_HEIGHT = 810
@@ -306,18 +307,22 @@ function drawBoard(context: CanvasRenderingContext2D,
 // TEST:
 export function drawTest() {
   const canvas = document.getElementById('target')
+  const freeEditingCheckbox = document.getElementById('free-editing')
   const sfenTextArea = document.getElementById('sfen')
   const readSfenButton = document.getElementById('read-sfen')
   const recordList = document.getElementById('record')
   const kifTextArea = document.getElementById('kif')
   const readKifButton = document.getElementById('read-kif')
-  const kifStartButton = document.getElementById('kif-start')
-  const kifEndButton = document.getElementById('kif-end')
-  const kifPrevButton = document.getElementById('kif-prev')
-  const kifNextButton = document.getElementById('kif-next')
+  const recordStartButton = document.getElementById('record-start')
+  const recordEndButton = document.getElementById('record-end')
+  const recordPrevButton = document.getElementById('record-prev')
+  const recordNextButton = document.getElementById('record-next')
 
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error('#target element is not a canvas')
+  }
+  if (!(freeEditingCheckbox instanceof HTMLInputElement)) {
+    throw new Error('#free-editing element is not an input')
   }
   if (!(sfenTextArea instanceof HTMLTextAreaElement)) {
     throw new Error('#sfen element is not a textarea')
@@ -334,42 +339,152 @@ export function drawTest() {
   if (!(readKifButton instanceof HTMLButtonElement)) {
     throw new Error('#read-kif element is not an html button element')
   }
-  if (!(kifStartButton instanceof HTMLButtonElement)) {
-    throw new Error('#kif-start element is not an html button element')
+  if (!(recordStartButton instanceof HTMLButtonElement)) {
+    throw new Error('#record-start element is not an html button element')
   }
-  if (!(kifEndButton instanceof HTMLButtonElement)) {
-    throw new Error('#kif-end element is not an html button element')
+  if (!(recordEndButton instanceof HTMLButtonElement)) {
+    throw new Error('#record-end element is not an html button element')
   }
-  if (!(kifPrevButton instanceof HTMLButtonElement)) {
-    throw new Error('#kif-prev element is not an html button element')
+  if (!(recordPrevButton instanceof HTMLButtonElement)) {
+    throw new Error('#record-prev element is not an html button element')
   }
-  if (!(kifNextButton instanceof HTMLButtonElement)) {
-    throw new Error('#kif-next element is not an html button element')
+  if (!(recordNextButton instanceof HTMLButtonElement)) {
+    throw new Error('#record-next element is not an html button element')
   }
 
-  let controller = new TestController(canvas, sfenTextArea,
+  let controller = new TestController(canvas,
+                                      freeEditingCheckbox,
+                                      sfenTextArea,
                                       readSfenButton,
                                       recordList,
                                       kifTextArea,
                                       readKifButton,
-                                      kifStartButton,
-                                      kifEndButton,
-                                      kifPrevButton,
-                                      kifNextButton)
+                                      recordStartButton,
+                                      recordEndButton,
+                                      recordPrevButton,
+                                      recordNextButton)
+}
+
+class Record {
+  private node: DedupViewNode<Move | DummyMove> | undefined
+
+  constructor(moves: Array<Move | DummyMove> = [new DummyMove(DummyMoveKind.START)]) {
+    if (moves.length === 0) {
+      this.node = undefined
+    } else {
+      this.node = new DedupViewNode(moves[0])
+      let parent = this.node
+      for (const move of moves.slice(1)) {
+        parent = parent.addChild(move)
+      }
+    }
+  }
+
+  private get viewNodes(): Array<DedupViewNode<Move | DummyMove>> {
+    if (this.node === undefined) {
+      return []
+    } else {
+      return this.node.view
+    }
+  }
+
+  get viewMoves(): Array<Move | DummyMove> {
+    return this.viewNodes.map((i) => { return i.value })
+  }
+
+  getBoard(index: number) {
+    return getBoardFromMoves(this.viewMoves, index)
+  }
+
+  private addMove(index: number, move: Move, select: boolean = false) {
+    if (index < 0 || this.viewNodes.length <= index) {
+      throw new Error(`Index ${index} is out of range of the record`)
+    }
+
+    this.viewNodes[index].addChild(move)
+
+    if (select) {
+      this.viewNodes[index].selectChild(move)
+    }
+  }
+
+  tryAddingLegalMove(index: number,
+                     moveFrom: SquarePlace | PieceStandPiecePlace,
+                     moveTo: SquarePlace): boolean {
+    if (index < 0 || this.viewNodes.length <= index) {
+      throw new Error(`Index ${index} is out of range of the record`)
+    }
+
+    const board = this.getBoard(index)
+    const player = (() => {
+      if (moveFrom instanceof SquarePlace) {
+        return board.getSquarePiece(moveFrom)?.player
+      } else if (moveFrom instanceof PieceStandPiecePlace) {
+        return moveFrom.player
+      } else {
+        throw new Error('Unreachable')
+      }
+    })()
+    const piece = (() => {
+      if (moveFrom instanceof SquarePlace) {
+        return board.getSquarePiece(moveFrom)?.piece
+      } else if (moveFrom instanceof PieceStandPiecePlace) {
+        return moveFrom.piece
+      } else {
+        throw new Error('Unreachable')
+      }
+    })()
+    const lastMove = this.viewMoves[index]
+    const lastPlayer = (() => {
+      if (lastMove instanceof DummyMove) {
+        switch (lastMove.kind) {
+          case DummyMoveKind.START:
+            // TODO: Support various handicap games.
+            return Player.SECOND
+          case DummyMoveKind.END:
+            throw new Error(`Cannot add a move after the game end`)
+        }
+      } else if (lastMove instanceof Move) {
+        return lastMove.player
+      } else {
+        throw new Error('Unreachable')
+      }
+    })()
+
+    if (player === undefined || player === lastPlayer || piece === undefined) {
+      return false
+    }
+    if (player !== flippedPlayer(lastPlayer)) {
+      return false
+    }
+    if (!board.isLegalMove(moveFrom, moveTo)) {
+      return false
+    }
+
+
+    // TODO: Do not ask if the move must promote.
+    const promotion =
+      board.isPromotableMove(moveFrom, moveTo) &&
+      window.confirm(`${getPieceNotation(piece).join('')}を成りますか？`)
+
+    this.addMove(index, new Move(player, moveFrom, moveTo, promotion), true)
+    return true
+  }
 }
 
 // TEST:
 export class TestController {
   private readonly canvas: HTMLCanvasElement
+  private readonly freeEditingCheckbox: HTMLInputElement
   private readonly sfenTextArea: HTMLTextAreaElement
   private readonly readSfenButton: HTMLButtonElement
   private readonly recordList: HTMLSelectElement
   private readonly kifTextArea: HTMLTextAreaElement
   private readonly readKifButton: HTMLButtonElement
-  private readonly kifStartButton: HTMLButtonElement
-  private readonly kifEndButton: HTMLButtonElement
-  private readonly kifPrevButton: HTMLButtonElement
-  private readonly kifNextButton: HTMLButtonElement
+  private readonly recordStartButton: HTMLButtonElement
+  private readonly recordEndButton: HTMLButtonElement
+  private readonly recordPrevButton: HTMLButtonElement
+  private readonly recordNextButton: HTMLButtonElement
   private board: Board
   private record: Record
   private recordIndex: number
@@ -378,34 +493,40 @@ export class TestController {
   private lastMove: LastMovePlace | undefined
 
   constructor(canvas: HTMLCanvasElement,
+              freeEditingCheckbox: HTMLInputElement,
               sfenTextArea: HTMLTextAreaElement,
               readSfenButton: HTMLButtonElement,
               recordList: HTMLSelectElement,
               kifTextArea: HTMLTextAreaElement,
               readKifButton: HTMLButtonElement,
-              kifStartButton: HTMLButtonElement,
-              kifEndButton: HTMLButtonElement,
-              kifPrevButton: HTMLButtonElement,
-              kifNextButton: HTMLButtonElement) {
+              recordStartButton: HTMLButtonElement,
+              recordEndButton: HTMLButtonElement,
+              recordPrevButton: HTMLButtonElement,
+              recordNextButton: HTMLButtonElement) {
     this.canvas = canvas
+    this.freeEditingCheckbox = freeEditingCheckbox
     this.sfenTextArea = sfenTextArea
     this.readSfenButton = readSfenButton
     this.recordList = recordList
     this.kifTextArea = kifTextArea
     this.readKifButton = readKifButton
-    this.kifStartButton = kifStartButton
-    this.kifEndButton = kifEndButton
-    this.kifPrevButton = kifPrevButton
-    this.kifNextButton = kifNextButton
+    this.recordStartButton = recordStartButton
+    this.recordEndButton = recordEndButton
+    this.recordPrevButton = recordPrevButton
+    this.recordNextButton = recordNextButton
+
     this.record = new Record()
     this.recordIndex = 0
-    this.board = this.record.getBoard(this.recordIndex)
+    this.board = getBoardFromMoves(this.record.viewMoves, this.recordIndex)
+
     this.mouseOver = undefined
     this.selected = undefined
     this.lastMove = undefined
 
+    // TODO: Use arrow function.
     let self = this
 
+    // TODO: Rename.
     function onMouseMoveTest(event: MouseEvent) {
       const diagram = new DiagramRect(self.canvas.width)
       const x = event.offsetX
@@ -419,8 +540,7 @@ export class TestController {
         const index = hitPieceStand.hitPieceIndex(x, y)
         if (index !== undefined
           && self.selected === undefined
-          && self.board.getPieceStand(hitPieceStand.player).length > index
-          && index < PIECE_STAND_PIECE_ORDER.length) {
+          && self.board.getPieceStand(hitPieceStand.player).length > index) {
           self.mouseOver = new PieceStandIndexedPlace(hitPieceStand.player, index)
         } else {
           self.mouseOver = new PieceStandPlace(hitPieceStand.player)
@@ -433,72 +553,41 @@ export class TestController {
       self.drawBoard()
     }
 
+    // TODO: Rename.
     function onMouseClickTest(event: MouseEvent) {
       const diagram = new DiagramRect(self.canvas.width)
       const x = event.offsetX
       const y = event.offsetY
       const hitSquare = diagram.board.hitSquare(x, y)
-      const hitPieceStand = diagram.hitPieceStand(x, y)
+      const hitPieceStandRect = diagram.hitPieceStand(x, y)
       const control = event.getModifierState('Control')
       const shift = event.getModifierState('Shift')
-
-      if (control
-        && hitSquare !== undefined
-        && self.board.getSquarePiece(hitSquare)) {
-        self.board.flipPlayer(hitSquare)
-        self.selected = undefined
-      } else if (shift
-        && hitSquare !== undefined
-        && self.board.getSquarePiece(hitSquare)) {
-        self.board.flipPiece(hitSquare)
-        self.selected = undefined
-      } else if (self.selected !== undefined) {
-        if (hitSquare !== undefined || hitPieceStand !== undefined) {
-          const moveFrom = (() => {
-            if (self.selected instanceof PieceStandIndexedPlace) {
-              const piece = self.board.getPieceStand(self.selected.player)
-                .pieceByIndex(self.selected.index)
-              if (piece === undefined) {
-                throw new Error('Invalid index of PieceStand')
-              }
-              return new PieceStandPiecePlace(self.selected.player, piece)
-            } else {
-              return self.selected
-            }
-          })()
-          let moveTo
-          if (hitSquare !== undefined) {
-            moveTo = hitSquare
-          } else if (hitPieceStand !== undefined) {
-            moveTo = new PieceStandPlace(hitPieceStand.player)
-          }
-          if (moveTo !== undefined && self.board.canMove(moveFrom)) {
-            self.board.move(moveFrom, moveTo)
-            if (moveTo instanceof SquarePlace) {
-              self.lastMove = moveTo
-            } else {
-              self.lastMove = undefined
-            }
-          }
-        }
-        self.selected = undefined
-      } else {
-        if (hitSquare !== undefined && self.board.canMove(hitSquare)) {
-          self.selected = hitSquare
+      const hitPieceStand = (() => {
+        if (hitPieceStandRect !== undefined) {
+          return new PieceStandPlace(hitPieceStandRect.player)
         } else {
-          for (let player of [Player.FIRST, Player.SECOND]) {
-            const pieceStand = diagram.pieceStand(player)
-            if (pieceStand.hit(x, y)) {
-              const index = pieceStand.hitPieceIndex(x, y)
-              if (index !== undefined
-                && index < self.board.getPieceStand(player).length
-                && index < PIECE_STAND_PIECE_ORDER.length) {
-                self.selected = new PieceStandIndexedPlace(player, index)
-              }
-              break
+          return undefined
+        }
+      })()
+      const hitPieceStandIndex = (() => {
+        for (const player of [Player.FIRST, Player.SECOND]) {
+          const pieceStand = diagram.pieceStand(player)
+          if (pieceStand.hit(x, y)) {
+            const index = pieceStand.hitPieceIndex(x, y)
+            if (index !== undefined
+              && index < self.board.getPieceStand(player).length) {
+              return new PieceStandIndexedPlace(player, index)
             }
           }
         }
+        return undefined
+      })()
+
+      if (self.freeEditing) {
+        self.editBoardFreely(hitSquare, hitPieceStand, hitPieceStandIndex,
+                             control, shift)
+      } else {
+        self.editBoardLegally(hitSquare, hitPieceStandIndex)
       }
 
       // TODO: Update only highlights are changed.
@@ -522,29 +611,29 @@ export class TestController {
 
     function onClickToReadKif(_: MouseEvent) {
       const text = self.kifTextArea.value
-      self.record = parseKif(text)
+      self.record = new Record(parseKif(text))
       self.updateRecordList()
       self.drawBoard()
     }
 
-    function onClickKifStart(_: MouseEvent) {
+    function onClickRecordStart(_: MouseEvent) {
       self.setRecordIndex(0)
       self.drawBoard()
     }
 
-    function onClickKifEnd(_: MouseEvent) {
-      self.setRecordIndex(self.record.moves.length - 1)
+    function onClickRecordEnd(_: MouseEvent) {
+      self.setRecordIndex(self.record.viewMoves.length - 1)
       self.drawBoard()
     }
 
-    function onClickKifPrev(_: MouseEvent) {
+    function onClickRecordPrev(_: MouseEvent) {
       self.setRecordIndex(Math.max(self.recordIndex - 1, 0))
       self.drawBoard()
     }
 
-    function onClickKifNext(_: MouseEvent) {
+    function onClickRecordNext(_: MouseEvent) {
       self.setRecordIndex(Math.min(self.recordIndex + 1,
-                                   self.record.moves.length - 1))
+                                   self.record.viewMoves.length - 1))
       self.drawBoard()
     }
 
@@ -554,14 +643,101 @@ export class TestController {
     this.readSfenButton.addEventListener('click', onClickToReadSfen)
     this.recordList.addEventListener('change', onChangeRecord)
     this.readKifButton.addEventListener('click', onClickToReadKif)
-    this.kifStartButton.addEventListener('click', onClickKifStart)
-    this.kifEndButton.addEventListener('click', onClickKifEnd)
-    this.kifPrevButton.addEventListener('click', onClickKifPrev)
-    this.kifNextButton.addEventListener('click', onClickKifNext)
+    this.recordStartButton.addEventListener('click', onClickRecordStart)
+    this.recordEndButton.addEventListener('click', onClickRecordEnd)
+    this.recordPrevButton.addEventListener('click', onClickRecordPrev)
+    this.recordNextButton.addEventListener('click', onClickRecordNext)
 
-    this.record = new Record()
     this.updateRecordList()
     this.drawBoard()
+  }
+
+  private getPieceStandPieceByIndex(pieceStandIndex: PieceStandIndexedPlace): PieceStandPiecePlace {
+    const piece = this.board.getPieceStand(pieceStandIndex.player)
+      .pieceByIndex(pieceStandIndex.index)
+    if (piece === undefined) {
+      throw new Error('Invalid index of a PieceStand')
+    }
+    return new PieceStandPiecePlace(pieceStandIndex.player, piece)
+  }
+
+  // Select a place if it can be selected.
+  private trySelectingPlace(place: SelectedPlace | undefined) {
+    if (place instanceof SquarePlace && this.board.canMove(place)) {
+      this.selected = place
+    } else if (place instanceof PieceStandIndexedPlace
+               // TODO: Make a method to check the index is valid.
+      && 0 <= place.index
+      && place.index < this.board.getPieceStand(place.player).length) {
+      this.selected = place
+    }
+  }
+
+  private editBoardFreely(hitSquare: SquarePlace | undefined,
+                          hitPieceStand: PieceStandPlace | undefined,
+                          hitPieceStandIndex: PieceStandIndexedPlace | undefined,
+                          control: boolean,
+                          shift: boolean) {
+    if (control
+      && hitSquare !== undefined
+      && this.board.getSquarePiece(hitSquare) !== undefined) {
+      this.board.flipPlayer(hitSquare)
+      this.selected = undefined
+    } else if (shift
+      && hitSquare !== undefined
+      && this.board.getSquarePiece(hitSquare) !== undefined) {
+      this.board.flipPiece(hitSquare)
+      this.selected = undefined
+    } else if (this.selected !== undefined) {
+      if (hitSquare !== undefined || hitPieceStand !== undefined) {
+        const moveFrom = (() => {
+          if (this.selected instanceof PieceStandIndexedPlace) {
+            return this.getPieceStandPieceByIndex(this.selected)
+          } else {
+            return this.selected
+          }
+        })()
+        const moveTo = hitSquare ?? hitPieceStand
+        if (moveTo !== undefined && this.board.canMove(moveFrom)) {
+          this.board.move(moveFrom, moveTo)
+          // TODO: Set current board to the initial move of the record.
+          if (moveTo instanceof SquarePlace) {
+            this.lastMove = moveTo
+          } else {
+            this.lastMove = undefined
+          }
+        }
+      }
+      this.selected = undefined
+    } else if (hitSquare !== undefined || hitPieceStandIndex !== undefined){
+      this.trySelectingPlace(hitSquare ?? hitPieceStandIndex)
+    }
+  }
+
+  private editBoardLegally(hitSquare: SquarePlace | undefined,
+                           hitPieceStandIndex: PieceStandIndexedPlace | undefined) {
+    if (this.selected) {
+      // TODO: Remove duplicates with editBoardFreely.
+      const moveFrom =  (() => {
+        if (this.selected instanceof PieceStandIndexedPlace) {
+          return this.getPieceStandPieceByIndex(this.selected)
+        } else {
+          return this.selected
+        }
+      })()
+      const moveTo = hitSquare
+
+      if (moveFrom !== undefined && moveTo !== undefined) {
+        this.tryAddingLegalMove(moveFrom, moveTo)
+        this.selected = undefined
+      }
+    } else if (hitSquare !== undefined || hitPieceStandIndex !== undefined){
+      this.trySelectingPlace(hitSquare ?? hitPieceStandIndex)
+    }
+  }
+
+  private get freeEditing() {
+    return this.freeEditingCheckbox.checked
   }
 
   drawBoard() {
@@ -573,12 +749,13 @@ export class TestController {
               this.mouseOver, this.selected, this.lastMove)
   }
 
+  // TODO: Receive index.
   updateRecordList() {
     while (this.recordList.firstChild) {
       this.recordList.removeChild(this.recordList.firstChild)
     }
-    for (let i = 0; i < this.record.moves.length; i++) {
-      const option = new Option(`${i.toString()} ${this.record.getMoveNotation(i)}`,
+    for (let i = 0; i < this.record.viewMoves.length; i++) {
+      const option = new Option(`${i.toString()} ${getMoveNotationFromMoves(this.record.viewMoves, i)}`,
                                 i.toString())
       this.recordList.appendChild(option)
     }
@@ -586,13 +763,13 @@ export class TestController {
   }
 
   setRecordIndex(index: number) {
-    if (index < 0 || this.record.moves.length <= index) {
+    if (index < 0 || this.record.viewMoves.length <= index) {
       throw new Error(`Index ${index} is out of range of the record`)
     }
 
     this.recordIndex = index
-    this.board = this.record.getBoard(index)
-    const move = this.record.moves[this.recordIndex]
+    this.board = getBoardFromMoves(this.record.viewMoves, index)
+    const move = this.record.viewMoves[this.recordIndex]
     if (move instanceof Move) {
       this.lastMove = move.moveTo
     } else {
@@ -601,5 +778,18 @@ export class TestController {
     this.selected = undefined
 
     this.recordList.selectedIndex = index
+  }
+
+  // Try moving a piece as the next move of the current selected move.
+  tryAddingLegalMove(moveFrom: SquarePlace | PieceStandPiecePlace,
+                     moveTo: SquarePlace): boolean {
+    if (this.record.tryAddingLegalMove(this.recordIndex, moveFrom, moveTo)) {
+      const index = this.recordIndex
+      this.updateRecordList()
+      this.setRecordIndex(index + 1)
+      return true
+    }
+
+    return false
   }
 }

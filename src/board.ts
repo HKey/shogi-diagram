@@ -74,6 +74,19 @@ export class PieceStandPiecePlace implements Equal {
   }
 }
 
+function isPromotablePiece(piece: Piece) {
+  switch (piece) {
+    case Piece.ROOK:
+    case Piece.BISHOP:
+    case Piece.SILVER:
+    case Piece.KNIGHT:
+    case Piece.LANCE:
+    case Piece.PAWN:
+      return true
+    default: return false
+  }
+}
+
 export function promotedPiece(piece: Piece): Piece {
   switch (piece) {
     case Piece.ROOK: return Piece.PROMOTED_ROOK
@@ -201,6 +214,7 @@ export class Board {
       return square
   }
 
+  // TODO: Separate into set and remove.
   setSquarePiece(squarePlace: SquarePlace, squarePiece: SquarePiece | undefined) {
     this.squares[this.index(squarePlace)] = squarePiece
   }
@@ -213,6 +227,7 @@ export class Board {
   }
 
   private pieceAndPlayer(place: SquarePlace | PieceStandPiecePlace) {
+    // TODO: Return undefined instead of { piece: undefined, player: undefined }.
     if (place instanceof SquarePlace) {
       const squarePiece = this.getSquarePiece(place)
       if (squarePiece !== undefined) {
@@ -237,9 +252,174 @@ export class Board {
     }
   }
 
+  // TODO: Rename to indicate that a piece can be moved as free editing like
+  //  "can be moved" or "piece exists".
   canMove(moveFrom: SquarePlace | PieceStandPiecePlace) {
     const { piece, player } = this.pieceAndPlayer(moveFrom)
     return piece !== undefined && player !== undefined
+  }
+
+  private makeLegalMovePlaces(moveFrom: SquarePlace): Array<SquarePlace> {
+    const squarePiece = this.getSquarePiece(moveFrom)
+    if (squarePiece === undefined) {
+      return []
+    }
+
+    const piece = squarePiece.piece
+    const player = squarePiece.player
+
+    // Movable places of a piece of the first player.
+    // file, rank, continuable
+    const mbs: Array<[number, number, boolean]> =
+      ((): Array<[number, number, boolean]> => {
+        switch (piece) {
+          case Piece.KING:
+            return [[-1, -1, false],
+                    [-1, 0, false],
+                    [-1, 1, false],
+                    [0, -1, false],
+                    [0, 1, false],
+                    [1, -1, false],
+                    [1, 0, false],
+                    [1, 1, false]]
+          case Piece.ROOK:
+            return [[-1, 0, true],
+                    [0, -1, true],
+                    [0, 1, true],
+                    [1, 0, true]]
+          case Piece.BISHOP:
+            return [[-1, -1, true],
+                    [-1, 1, true],
+                    [1, -1, true],
+                    [1, 1, true]]
+          case Piece.GOLD:
+          case Piece.PROMOTED_SILVER:
+          case Piece.PROMOTED_KNIGHT:
+          case Piece.PROMOTED_LANCE:
+          case Piece.PROMOTED_PAWN:
+            return [[-1, -1, false],
+                    [-1, 0, false],
+                    [0, -1, false],
+                    [0, 1, false],
+                    [1, -1, false],
+                    [1, 0, false]]
+          case Piece.SILVER:
+            return [[-1, -1, false],
+                    [-1, 1, false],
+                    [0, -1, false],
+                    [1, -1, false],
+                    [1, 1, false]]
+          case Piece.KNIGHT:
+            return [[-1, -2, false],
+                    [1, -2, false]]
+          case Piece.LANCE:
+            return [[0, -1, true]]
+          case Piece.PAWN:
+            return [[0, -1, false]]
+          case Piece.PROMOTED_ROOK:
+            return [[-1, 0, true],
+                    [-1, -1, false],
+                    [-1, 1, false],
+                    [0, -1, true],
+                    [0, 1, true],
+                    [1, 0, true],
+                    [1, -1, false],
+                    [1, 1, false]]
+          case Piece.PROMOTED_BISHOP:
+            return [[-1, -1, true],
+                    [-1, 0, false],
+                    [-1, 1, true],
+                    [0, -1, false],
+                    [0, 1, false],
+                    [1, -1, true],
+                    [1, 0, false],
+                    [1, 1, true]]
+        }
+      })()
+    const movables: Array<[number, number, boolean]> =
+      ((): Array<[number, number, boolean]> => {
+        switch (player) {
+          case Player.FIRST: return mbs
+          case Player.SECOND: return mbs.map((m) => {
+            const [file, rank, continuable] = m
+            return [file, -1 * rank, continuable]
+          })
+        }
+      })()
+
+    let places: Array<SquarePlace> = []
+    const canMoveTo = (moveTo: SquarePlace) => {
+      const squarePiece = this.getSquarePiece(moveTo)
+      return squarePiece === undefined || squarePiece.player !== player
+    }
+    const makeSquarePlace = (file: number, rank: number) => {
+      if (0 <= file && file < NUM_FILES &&
+        0 <= rank && rank < NUM_RANKS) {
+        return new SquarePlace(file, rank)
+      } else {
+        return undefined
+      }
+    }
+
+    for (const [file, rank, continuable] of movables) {
+      if (continuable) {
+        let p = makeSquarePlace(moveFrom.file + file, moveFrom.rank + rank)
+        while (p !== undefined && canMoveTo(p)) {
+          places.push(p)
+          const sqp = this.getSquarePiece(p)
+          if (sqp !== undefined && sqp.player !== player) {
+            break
+          }
+          p = makeSquarePlace(p.file + file, p.rank + rank)
+        }
+      } else {
+        const p = makeSquarePlace(moveFrom.file + file, moveFrom.rank + rank)
+        if (p !== undefined && canMoveTo(p)) {
+          places.push(p)
+        }
+      }
+    }
+
+    return places
+  }
+
+  isPromotableMove(moveFrom: SquarePlace | PieceStandPiecePlace,
+                   moveTo: SquarePlace): boolean {
+    if (moveFrom instanceof PieceStandPiecePlace) {
+      return false
+    }
+
+    const sp = this.getSquarePiece(moveFrom)
+    if (sp === undefined) {
+      throw new Error('There is no piece at moveFrom')
+    }
+    const piece = sp.piece
+    const player = sp.player
+
+    const isPromotableArea = (rank: number) => {
+      switch (player) {
+        case Player.FIRST: return rank <= 2
+        case Player.SECOND: return rank >= 6
+      }
+    }
+
+    return isPromotablePiece(piece)
+      && (isPromotableArea(moveFrom.rank) || isPromotableArea(moveTo.rank))
+  }
+
+  isLegalMove(moveFrom: SquarePlace | PieceStandPiecePlace,
+              moveTo: SquarePlace): boolean {
+    if (moveFrom instanceof SquarePlace) {
+      const legalPlaces = this.makeLegalMovePlaces(moveFrom)
+      return legalPlaces.some((p) => moveTo.equal(p))
+    } else if (moveFrom instanceof PieceStandPiecePlace) {
+      // TODO: Consider two pawns, dropping or moving piece where
+      // cannot move and other illegal moves.
+      return this.getPieceStand(moveFrom.player).has(moveFrom.piece) &&
+        this.getSquarePiece(moveTo) === undefined
+    } else {
+      throw new Error('Unreachable')
+    }
   }
 
   move(moveFrom: SquarePlace | PieceStandPiecePlace,
@@ -251,6 +431,7 @@ export class Board {
 
     const { piece, player } = this.pieceAndPlayer(moveFrom)
 
+    // TODO: Use canMove.
     if (piece === undefined || player === undefined) {
       throw new Error('Piece to be moved is not found')
     }
