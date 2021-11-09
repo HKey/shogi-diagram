@@ -1,5 +1,5 @@
 import { PieceStandPiecePlace, SquarePlace } from './board'
-import { Record, Move, DummyMove } from './record'
+import { Move, DummyMove, DummyMoveKind } from './record'
 import { Player, flippedPlayer, Piece } from './shogi'
 
 const PLAYERS = ['▲', '△']
@@ -119,9 +119,9 @@ function tryParsingMoveLine(s: string) {
   }
 }
 
-export function parseKif(kif: string): Record {
+export function parseKif(kif: string): Array<Move | DummyMove> {
   let lines = kif.split('\n')
-  let moves: Array<Move | DummyMove> = [DummyMove.START]
+  let moves: Array<Move | DummyMove> = [new DummyMove(DummyMoveKind.START)]
   let lastDestination: SquarePlace | undefined = undefined
   // NOTE: When supporting various handicap games, consider a game
   // starts with the second player's move.
@@ -157,7 +157,7 @@ export function parseKif(kif: string): Record {
           ? moveInfo.player : flippedPlayer(lastPlayer)
 
         if (moveInfo.gameEnd) {
-          moves.push(DummyMove.END)
+          moves.push(new DummyMove(DummyMoveKind.END))
         } else {
           if (moveInfo.piece === undefined) {
             throw new Error('Invalid move because piece is not specified')
@@ -213,5 +213,5 @@ export function parseKif(kif: string): Record {
     i++
   }
 
-  return new Record(moves)
+  return moves
 }
