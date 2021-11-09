@@ -2,8 +2,9 @@ import { Rect, DiagramRect, BoardRect, PieceStandRect, PieceStandIndexedPlace } 
 import { Piece, Player, NUM_RANKS, NUM_FILES, getRankNotation, getFileNotation, getPieceNotation } from './shogi'
 import { PIECE_STAND_PIECE_ORDER, SquarePlace, PieceStand, Board, SquarePiece, PieceStandPlace, PieceStandPiecePlace } from './board'
 import { parseSfen } from './sfen'
-import { Record, Move } from './record'
+import { Move, DummyMove, DummyMoveKind, getBoardFromMoves } from './record'
 import { parseKif } from './kif'
+import { DedupViewNode } from './node'
 
 const DEFAULT_WIDTH = 1080
 const DEFAULT_HEIGHT = 810
@@ -356,6 +357,113 @@ export function drawTest() {
                                       kifEndButton,
                                       kifPrevButton,
                                       kifNextButton)
+}
+
+class Record {
+  private node: DedupViewNode<Move | DummyMove> | undefined
+
+  constructor(moves: Array<Move | DummyMove> = [new DummyMove(DummyMoveKind.START)]) {
+    if (moves.length === 0) {
+      this.node = undefined
+    } else {
+      this.node = new DedupViewNode(moves[0])
+      let parent = this.node
+      for (const move of moves.slice(1)) {
+        parent = parent.addChild(move)
+      }
+    }
+  }
+
+  private get viewNodes(): Array<DedupViewNode<Move | DummyMove>> {
+    if (this.node === undefined) {
+      return []
+    } else {
+      return this.node.view
+    }
+  }
+
+  get viewMoves(): Array<Move | DummyMove> {
+    return this.viewNodes.map((i) => { return i.value })
+  }
+
+  getBoard(index: number) {
+    return getBoardFromMoves(this.viewMoves, index)
+  }
+
+  private addMove(index: number, move: Move, select: boolean = false) {
+    if (index < 0 || this.viewNodes.length <= index) {
+      throw new Error(`Index ${index} is out of range of the record`)
+    }
+
+    this.viewNodes[index].addChild(move)
+
+    if (select) {
+      this.viewNodes[index].selectChild(move)
+    }
+  }
+
+  tryAddingLegalMove(index: number,
+                     moveFrom: SquarePlace | PieceStandPiecePlace,
+                     moveTo: SquarePlace): boolean {
+    if (index < 0 || this.viewNodes.length <= index) {
+      throw new Error(`Index ${index} is out of range of the record`)
+    }
+
+    const board = this.getBoard(index)
+    const player = (() => {
+      if (moveFrom instanceof SquarePlace) {
+        return board.getSquarePiece(moveFrom)?.player
+      } else if (moveFrom instanceof PieceStandPiecePlace) {
+        return moveFrom.player
+      } else {
+        throw new Error('Unreachable')
+      }
+    })()
+    const piece = (() => {
+      if (moveFrom instanceof SquarePlace) {
+        return board.getSquarePiece(moveFrom)?.piece
+      } else if (moveFrom instanceof PieceStandPiecePlace) {
+        return moveFrom.piece
+      } else {
+        throw new Error('Unreachable')
+      }
+    })()
+    const lastMove = this.viewMoves[index]
+    const lastPlayer = (() => {
+      if (lastMove instanceof DummyMove) {
+        switch (lastMove.kind) {
+          case DummyMoveKind.START:
+            // TODO: Support various handicap games.
+            return Player.SECOND
+          case DummyMoveKind.END:
+            throw new Error(`Cannot add a move after the game end`)
+        }
+      } else if (lastMove instanceof Move) {
+        return lastMove.player
+      } else {
+        throw new Error('Unreachable')
+      }
+    })()
+
+    if (player === undefined || player === lastPlayer || piece === undefined) {
+      return false
+    }
+    if (player !== flippedPlayer(lastPlayer)) {
+      return false
+    }
+    if (!board.isLegalMove(moveFrom, moveTo)) {
+      return false
+    }
+
+
+    // TODO: Do not ask if the move must promote.
+    const promotion =
+      board.isPromotableMove(moveFrom, moveTo) &&
+      window.confirm(`${getPieceNotation(piece).join('')}を成りますか？`)
+
+    this.addMove(index, new Move(player, moveFrom, moveTo, promotion), true)
+    return true
+  }
 }
 
 // TEST:
