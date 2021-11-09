@@ -214,6 +214,7 @@ export class Board {
       return square
   }
 
+  // TODO: Separate into set and remove.
   setSquarePiece(squarePlace: SquarePlace, squarePiece: SquarePiece | undefined) {
     this.squares[this.index(squarePlace)] = squarePiece
   }
@@ -226,6 +227,7 @@ export class Board {
   }
 
   private pieceAndPlayer(place: SquarePlace | PieceStandPiecePlace) {
+    // TODO: Return undefined instead of { piece: undefined, player: undefined }.
     if (place instanceof SquarePlace) {
       const squarePiece = this.getSquarePiece(place)
       if (squarePiece !== undefined) {
@@ -250,6 +252,8 @@ export class Board {
     }
   }
 
+  // TODO: Rename to indicate that a piece can be moved as free editing like
+  //  "can be moved" or "piece exists".
   canMove(moveFrom: SquarePlace | PieceStandPiecePlace) {
     const { piece, player } = this.pieceAndPlayer(moveFrom)
     return piece !== undefined && player !== undefined
@@ -427,6 +431,7 @@ export class Board {
 
     const { piece, player } = this.pieceAndPlayer(moveFrom)
 
+    // TODO: Use canMove.
     if (piece === undefined || player === undefined) {
       throw new Error('Piece to be moved is not found')
     }

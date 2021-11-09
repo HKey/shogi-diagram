@@ -523,8 +523,10 @@ export class TestController {
     this.selected = undefined
     this.lastMove = undefined
 
+    // TODO: Use arrow function.
     let self = this
 
+    // TODO: Rename.
     function onMouseMoveTest(event: MouseEvent) {
       const diagram = new DiagramRect(self.canvas.width)
       const x = event.offsetX
@@ -551,6 +553,7 @@ export class TestController {
       self.drawBoard()
     }
 
+    // TODO: Rename.
     function onMouseClickTest(event: MouseEvent) {
       const diagram = new DiagramRect(self.canvas.width)
       const x = event.offsetX
@@ -746,6 +749,7 @@ export class TestController {
               this.mouseOver, this.selected, this.lastMove)
   }
 
+  // TODO: Receive index.
   updateRecordList() {
     while (this.recordList.firstChild) {
       this.recordList.removeChild(this.recordList.firstChild)
