@@ -1,14 +1,28 @@
 import { getFileNotation, getRankNotation, Player, getPieceNotation } from './shogi'
 import { SquarePlace, PieceStandPiecePlace, Board, SquarePiece, promotedPiece } from './board'
 import { parseSfen } from './sfen'
+import { Equal } from './equal'
 
-export const enum DummyMove {
+export const enum DummyMoveKind {
   START,
   // TODO: Support various game ends.
   END
 }
 
-export class Move {
+export class DummyMove implements Equal {
+  readonly kind: DummyMoveKind
+
+  constructor(kind: DummyMoveKind) {
+    this.kind = kind
+  }
+
+  equal(other: any) {
+    return other instanceof DummyMove
+      && this.kind === other.kind
+  }
+}
+
+export class Move implements Equal {
   readonly player: Player
   readonly moveFrom: SquarePlace | PieceStandPiecePlace
   readonly moveTo: SquarePlace
@@ -26,6 +40,14 @@ export class Move {
 
   get drop(): boolean {
     return this.moveFrom instanceof PieceStandPiecePlace
+  }
+
+  equal(other: any) {
+    return other instanceof Move
+      && this.player === other.player
+      && this.moveFrom.equal(other.moveFrom)
+      && this.moveTo.equal(other.moveTo)
+      && this.promote === other.promote
   }
 }
 
