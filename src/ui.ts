@@ -711,7 +711,7 @@ export class TestController {
 
   private editBoardLegally(hitSquare: SquarePlace | undefined,
                            hitPieceStandIndex: PieceStandIndexedPlace | undefined) {
-    if (this.selected) {
+    if (this.selected !== undefined) {
       // TODO: Remove duplicates with editBoardFreely.
       const moveFrom =  (() => {
         if (this.selected instanceof PieceStandIndexedPlace) {
@@ -724,8 +724,8 @@ export class TestController {
 
       if (moveFrom !== undefined && moveTo !== undefined) {
         this.tryAddingLegalMove(moveFrom, moveTo)
-        this.selected = undefined
       }
+      this.selected = undefined
     } else if (hitSquare !== undefined || hitPieceStandIndex !== undefined){
       this.trySelectingPlace(hitSquare ?? hitPieceStandIndex)
     }
