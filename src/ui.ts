@@ -523,39 +523,36 @@ export class TestController {
     this.selected = undefined
     this.lastMove = undefined
 
-    // TODO: Use arrow function.
-    let self = this
-
     // TODO: Rename.
-    function onMouseMoveTest(event: MouseEvent) {
-      const diagram = new DiagramRect(self.canvas.width)
+    const onMouseMoveTest = (event: MouseEvent) => {
+      const diagram = new DiagramRect(this.canvas.width)
       const x = event.offsetX
       const y = event.offsetY
       const hitSquare = diagram.board.hitSquare(x, y)
       const hitPieceStand = diagram.hitPieceStand(x, y)
 
       if (hitSquare !== undefined) {
-        self.mouseOver = hitSquare
+        this.mouseOver = hitSquare
       } else if (hitPieceStand !== undefined) {
         const index = hitPieceStand.hitPieceIndex(x, y)
         if (index !== undefined
-          && self.selected === undefined
-          && self.board.getPieceStand(hitPieceStand.player).length > index) {
-          self.mouseOver = new PieceStandIndexedPlace(hitPieceStand.player, index)
+          && this.selected === undefined
+          && this.board.getPieceStand(hitPieceStand.player).length > index) {
+          this.mouseOver = new PieceStandIndexedPlace(hitPieceStand.player, index)
         } else {
-          self.mouseOver = new PieceStandPlace(hitPieceStand.player)
+          this.mouseOver = new PieceStandPlace(hitPieceStand.player)
         }
       } else {
-        self.mouseOver = undefined
+        this.mouseOver = undefined
       }
 
       // TODO: Update only highlights are changed.
-      self.drawBoard()
+      this.drawBoard()
     }
 
     // TODO: Rename.
-    function onMouseClickTest(event: MouseEvent) {
-      const diagram = new DiagramRect(self.canvas.width)
+    const onMouseClickTest = (event: MouseEvent) => {
+      const diagram = new DiagramRect(this.canvas.width)
       const x = event.offsetX
       const y = event.offsetY
       const hitSquare = diagram.board.hitSquare(x, y)
@@ -575,7 +572,7 @@ export class TestController {
           if (pieceStand.hit(x, y)) {
             const index = pieceStand.hitPieceIndex(x, y)
             if (index !== undefined
-              && index < self.board.getPieceStand(player).length) {
+              && index < this.board.getPieceStand(player).length) {
               return new PieceStandIndexedPlace(player, index)
             }
           }
@@ -583,58 +580,58 @@ export class TestController {
         return undefined
       })()
 
-      if (self.freeEditing) {
-        self.editBoardFreely(hitSquare, hitPieceStand, hitPieceStandIndex,
+      if (this.freeEditing) {
+        this.editBoardFreely(hitSquare, hitPieceStand, hitPieceStandIndex,
                              control, shift)
       } else {
-        self.editBoardLegally(hitSquare, hitPieceStandIndex)
+        this.editBoardLegally(hitSquare, hitPieceStandIndex)
       }
 
       // TODO: Update only highlights are changed.
-      self.drawBoard()
+      this.drawBoard()
     }
 
-    function onClickToReadSfen(_: MouseEvent) {
-      const text = self.sfenTextArea.value
-      self.board = parseSfen(text)
-      self.lastMove = undefined
-      self.drawBoard()
+    const onClickToReadSfen = (_: MouseEvent) => {
+      const text = this.sfenTextArea.value
+      this.board = parseSfen(text)
+      this.lastMove = undefined
+      this.drawBoard()
     }
 
-    function onChangeRecord(_: Event) {
-      const value = self.recordList.value
+    const onChangeRecord = (_: Event) => {
+      const value = this.recordList.value
       if (value !== '') {
-        self.setRecordIndex(parseInt(value))
-        self.drawBoard()
+        this.setRecordIndex(parseInt(value))
+        this.drawBoard()
       }
     }
 
-    function onClickToReadKif(_: MouseEvent) {
-      const text = self.kifTextArea.value
-      self.record = new Record(parseKif(text))
-      self.updateRecordList()
-      self.drawBoard()
+    const onClickToReadKif = (_: MouseEvent) => {
+      const text = this.kifTextArea.value
+      this.record = new Record(parseKif(text))
+      this.updateRecordList()
+      this.drawBoard()
     }
 
-    function onClickRecordStart(_: MouseEvent) {
-      self.setRecordIndex(0)
-      self.drawBoard()
+    const onClickRecordStart = (_: MouseEvent) => {
+      this.setRecordIndex(0)
+      this.drawBoard()
     }
 
-    function onClickRecordEnd(_: MouseEvent) {
-      self.setRecordIndex(self.record.viewMoves.length - 1)
-      self.drawBoard()
+    const onClickRecordEnd = (_: MouseEvent) => {
+      this.setRecordIndex(this.record.viewMoves.length - 1)
+      this.drawBoard()
     }
 
-    function onClickRecordPrev(_: MouseEvent) {
-      self.setRecordIndex(Math.max(self.recordIndex - 1, 0))
-      self.drawBoard()
+    const onClickRecordPrev = (_: MouseEvent) => {
+      this.setRecordIndex(Math.max(this.recordIndex - 1, 0))
+      this.drawBoard()
     }
 
-    function onClickRecordNext(_: MouseEvent) {
-      self.setRecordIndex(Math.min(self.recordIndex + 1,
-                                   self.record.viewMoves.length - 1))
-      self.drawBoard()
+    const onClickRecordNext = (_: MouseEvent) => {
+      this.setRecordIndex(Math.min(this.recordIndex + 1,
+                                   this.record.viewMoves.length - 1))
+      this.drawBoard()
     }
 
 
