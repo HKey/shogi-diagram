@@ -744,8 +744,7 @@ export class TestController {
               this.mouseOver, this.selected, this.lastMove)
   }
 
-  // TODO: Receive index.
-  updateRecordList() {
+  updateRecordList(newIndex: number = 0) {
     while (this.recordList.firstChild) {
       this.recordList.removeChild(this.recordList.firstChild)
     }
@@ -754,7 +753,7 @@ export class TestController {
                                 i.toString())
       this.recordList.appendChild(option)
     }
-    this.setRecordIndex(0)
+    this.setRecordIndex(newIndex)
   }
 
   setRecordIndex(index: number) {
@@ -780,8 +779,7 @@ export class TestController {
                      moveTo: SquarePlace): boolean {
     if (this.record.tryAddingLegalMove(this.recordIndex, moveFrom, moveTo)) {
       const index = this.recordIndex
-      this.updateRecordList()
-      this.setRecordIndex(index + 1)
+      this.updateRecordList(index + 1)
       return true
     }
 
