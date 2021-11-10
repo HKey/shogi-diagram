@@ -549,8 +549,7 @@ export class TestController {
       this.drawBoard()
     }
 
-    // TODO: Rename.
-    const onMouseClickTest = (event: MouseEvent) => {
+    const onMouseClickCanvas = (event: MouseEvent) => {
       const diagram = new DiagramRect(this.canvas.width)
       const x = event.offsetX
       const y = event.offsetY
@@ -635,7 +634,7 @@ export class TestController {
 
 
     this.canvas.addEventListener('mousemove', onMouseMoveCanvas)
-    this.canvas.addEventListener('click', onMouseClickTest)
+    this.canvas.addEventListener('click', onMouseClickCanvas)
     this.readSfenButton.addEventListener('click', onClickToReadSfen)
     this.recordList.addEventListener('change', onChangeRecord)
     this.readKifButton.addEventListener('click', onClickToReadKif)
