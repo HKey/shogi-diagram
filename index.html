@@ -5,9 +5,12 @@
   </head>
   <body>
     <div>
-      <canvas id='target'
-              width='1080'
-              height='810'></canvas>
+      <div>
+        <canvas id='target'
+                width='1080'
+                height='810'></canvas>
+      </div>
+      <button id='download' type='button'>画像をダウンロード</button>
       <div>
         <div>
           <button id='record-start' type='button'>|◀</button>
@@ -15,7 +18,7 @@
           <button id='record-next' type='button'>▶</button>
           <button id='record-end' type='button'>▶|</button>
         </div>
-        <select id='record' size='10'></select>
+        <select id='record' size='10' multiple></select>
       </div>
       <fieldset>
         <legend>編集モード</legend>
