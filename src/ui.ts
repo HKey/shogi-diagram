@@ -5,6 +5,12 @@ import { parseSfen } from './sfen'
 import { Move, DummyMove, DummyMoveKind, getBoardFromMoves, getMoveNotationFromMoves } from './record'
 import { parseKif } from './kif'
 import { DedupViewNode } from './node'
+import { saveAs } from 'file-saver'
+// To use jszip, these settings are needed in compilerOptions of
+// tsconfig.json:
+//   "moduleResolution": "node"
+//   "esModuleInterop": true
+import JSZip from 'jszip'
 
 const DEFAULT_WIDTH = 1080
 const DEFAULT_HEIGHT = 810
@@ -307,6 +313,7 @@ function drawBoard(context: CanvasRenderingContext2D,
 // TEST:
 export function drawTest() {
   const canvas = document.getElementById('target')
+  const downloadButton = document.getElementById('download')
   const freeEditingCheckbox = document.getElementById('free-editing')
   const sfenTextArea = document.getElementById('sfen')
   const readSfenButton = document.getElementById('read-sfen')
@@ -320,6 +327,9 @@ export function drawTest() {
 
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error('#target element is not a canvas')
+  }
+  if (!(downloadButton instanceof HTMLButtonElement)) {
+    throw new Error('#download element is not an html button element')
   }
   if (!(freeEditingCheckbox instanceof HTMLInputElement)) {
     throw new Error('#free-editing element is not an input')
@@ -353,6 +363,7 @@ export function drawTest() {
   }
 
   let controller = new TestController(canvas,
+                                      downloadButton,
                                       freeEditingCheckbox,
                                       sfenTextArea,
                                       readSfenButton,
@@ -475,6 +486,7 @@ class Record {
 // TEST:
 export class TestController {
   private readonly canvas: HTMLCanvasElement
+  private readonly downloadButton: HTMLButtonElement
   private readonly freeEditingCheckbox: HTMLInputElement
   private readonly sfenTextArea: HTMLTextAreaElement
   private readonly readSfenButton: HTMLButtonElement
@@ -493,6 +505,7 @@ export class TestController {
   private lastMove: LastMovePlace | undefined
 
   constructor(canvas: HTMLCanvasElement,
+              downloadButton: HTMLButtonElement,
               freeEditingCheckbox: HTMLInputElement,
               sfenTextArea: HTMLTextAreaElement,
               readSfenButton: HTMLButtonElement,
@@ -504,6 +517,7 @@ export class TestController {
               recordPrevButton: HTMLButtonElement,
               recordNextButton: HTMLButtonElement) {
     this.canvas = canvas
+    this.downloadButton = downloadButton
     this.freeEditingCheckbox = freeEditingCheckbox
     this.sfenTextArea = sfenTextArea
     this.readSfenButton = readSfenButton
@@ -589,6 +603,89 @@ export class TestController {
       this.drawBoard()
     }
 
+    const onClickDownload = (_: MouseEvent) => {
+      const selectedIndexes =
+        Array.from(this.recordList.selectedOptions)
+          .map(e => parseInt(e.value))
+      const multiSelect = selectedIndexes.length > 1
+      const getLastPlace =
+        (lastMove: Move | DummyMove): LastMovePlace | undefined => {
+          if (lastMove instanceof Move) {
+            return lastMove.moveTo
+          } else if (lastMove instanceof DummyMove) {
+            return undefined
+          }
+        }
+      const makeFilename = (index: number) => {
+        return index.toString().padStart(3, '0') + '.png'
+      }
+      const mapPromise =
+        async <A, R>(array: Array<A>, fn: (e: A) => Promise<R>): Promise<Array<R>> => {
+          const results = []
+          for (const e of array) {
+            results.push(await fn(e))
+          }
+          return results
+        }
+      const canvasToBlob = (canvas: HTMLCanvasElement): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+          canvas.toBlob((blob: Blob | null) => {
+            if (blob !== null) {
+              resolve(blob)
+            } else {
+              reject('HTMLCanvasElement.toBlob failed')
+            }
+          })
+        })
+      }
+
+
+      // TODO: Use another canvas to generate images.
+      canvas = this.canvas
+      const context = canvas.getContext('2d')
+      if (context === null) {
+        throw new Error('Cannot get a CanvasRenderingContext2D')
+      }
+
+      // TODO: Disable buttons while generating images.
+
+      if (multiSelect) {
+        // When multiple indexes are selected, save images as a zip archive.
+        const zip = new JSZip()
+        const moves = this.record.viewMoves;
+
+        (async () => {
+          await mapPromise(selectedIndexes, async (index: number) => {
+            const lastMove = moves[index]
+            const lastPlace = getLastPlace(lastMove)
+            const board = getBoardFromMoves(moves, index)
+            drawBoard(context, board, undefined, undefined, lastPlace)
+            const blob = await canvasToBlob(canvas)
+
+            zip.file(makeFilename(index), blob)
+          })
+
+          const blob = await zip.generateAsync({ type: 'blob' })
+          saveAs(blob, 'diagrams.zip')
+        })().catch((e: any) => {
+          throw new Error(`Generating an archive of images has been failed: ${e}`)
+        })
+      } else {
+        // When single index is selected, save an image as a png file.
+        const index = this.recordIndex
+        const moves = this.record.viewMoves
+        const lastMove = moves[index]
+        const lastPlace = getLastPlace(lastMove)
+        const board = getBoardFromMoves(moves, index)
+        drawBoard(context, board, undefined, undefined, lastPlace)
+        canvasToBlob(canvas).then((blob) => {
+          saveAs(blob, makeFilename(index))
+        }).catch((e) => {
+          throw new Error(`Generating image has been failed: ${e}`)
+        })
+      }
+    }
+
     const onClickToReadSfen = (_: MouseEvent) => {
       const text = this.sfenTextArea.value
       this.board = parseSfen(text)
@@ -598,7 +695,11 @@ export class TestController {
 
     const onChangeRecord = (_: Event) => {
       const value = this.recordList.value
-      if (value !== '') {
+      const multiSelect = this.recordList.selectedOptions.length > 1
+
+      if (multiSelect) {
+        // Do nothing.
+      } else if (value !== '') {
         this.setRecordIndex(parseInt(value))
         this.drawBoard()
       }
@@ -635,6 +736,7 @@ export class TestController {
 
     this.canvas.addEventListener('mousemove', onMouseMoveCanvas)
     this.canvas.addEventListener('click', onMouseClickCanvas)
+    this.downloadButton.addEventListener('click', onClickDownload)
     this.readSfenButton.addEventListener('click', onClickToReadSfen)
     this.recordList.addEventListener('change', onChangeRecord)
     this.readKifButton.addEventListener('click', onClickToReadKif)
